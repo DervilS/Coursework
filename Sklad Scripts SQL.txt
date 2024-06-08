@@ -1,0 +1,158 @@
+#Создание таблиц
+
+CREATE TABLE `documents` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `number` varchar(45) NOT NULL,
+  PRIMARY KEY (`id`)
+) DEFAULT CHARSET=utf8mb3;
+
+CREATE TABLE `materials` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `class_code` varchar(45) NOT NULL,
+  `group_code` varchar(45) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) DEFAULT CHARSET=utf8mb3;
+
+CREATE TABLE `units` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `material_code` varchar(45) DEFAULT NULL,
+  `name` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) DEFAULT CHARSET=utf8mb3;
+
+CREATE TABLE `vendor` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `inn` varchar(12) NOT NULL,
+  `legal_address` varchar(255) NOT NULL,
+  `bank_adress` varchar(255) NOT NULL,
+  `bank_account` varchar(20) NOT NULL,
+  PRIMARY KEY (`id`)
+) DEFAULT CHARSET=utf8mb3;
+
+CREATE TABLE `storage` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `date` date NOT NULL,
+  `vendor_id` int NOT NULL,
+  `balance_account` int DEFAULT NULL,
+  `document_id` int NOT NULL,
+  `document_number` varchar(10) DEFAULT NULL,
+  `material_id` int DEFAULT NULL,
+  `marerial_account` varchar(45) NOT NULL,
+  `unit_id` int NOT NULL,
+  `material_count` int NOT NULL,
+  `price` float NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `vendor_id_idx` (`vendor_id`),
+  KEY `document_id_idx` (`document_id`),
+  KEY `material_id_idx` (`material_id`),
+  KEY `unit_id_idx` (`unit_id`),
+  CONSTRAINT `document_id` FOREIGN KEY (`document_id`) REFERENCES `documents` (`id`),
+  CONSTRAINT `material_id` FOREIGN KEY (`material_id`) REFERENCES `materials` (`id`),
+  CONSTRAINT `unit_id` FOREIGN KEY (`unit_id`) REFERENCES `units` (`id`),
+  CONSTRAINT `vendor_id` FOREIGN KEY (`vendor_id`) REFERENCES `vendor` (`id`)
+) DEFAULT CHARSET=utf8mb3;
+
+
+
+
+
+#Подсчет количества поставщиков выбранного материала
+USE sklad;
+DELIMITER $$
+CREATE FUNCTION CountVendors(material_id INT) RETURNS INT
+reads sql data
+deterministic
+BEGIN
+	DECLARE vendor_count INT;
+    
+    SELECT COUNT(DISTINCT vendor_id)
+    INTO vendor_count
+    FROM storage
+    WHERE storage.material_id = material_id;
+    
+    RETURN vendor_count;
+END$$
+DELIMITER ;
+
+#Вызов функции
+SELECT CountVendors(1);
+
+
+#Добавление единицы хранения
+USE sklad;
+DELIMITER $$
+CREATE procedure AddStorageItem(
+	in date DATE,
+    in vendor_id INT,
+    in balance_account INT,
+    in document_id INT,
+    in document_number varchar(10),
+    in material_id int,
+    in marerial_account varchar(45),
+    in unit_id int,
+    in material_count int,
+    in price float
+)
+
+BEGIN
+insert into storage (date, vendor_id, balance_account, document_id, document_number, material_id, marerial_account, unit_id, material_count, price)
+values (date, vendor_id, balance_account, document_id, document_number, material_id, marerial_account, unit_id, material_count, price);
+END$$
+
+DELIMITER ;
+
+#Процедура
+CALL AddStorageItem('2024-05-30', 2, 7, 1, 'DOC3742', 3, 77, 6, 100, 999);
+
+#Список поставщиков материала
+USE sklad;
+DELIMITER $$
+
+CREATE procedure GetMaterialVendors(desirable_material_id INT)  
+
+begin
+	select * from vendor inner join storage on storage.vendor_id = vendor.id where storage.material_id = desirable_material_id;
+END$$
+DELIMITER ;
+
+#Вызов процедуры
+CALL GetMaterialVendors (1)
+
+
+#Количество поставщиков по адресу банка
+USE sklad;
+DELIMITER $$
+CREATE FUNCTION BankVendorsCount(adress varchar(255)) RETURNS INT
+reads sql data
+deterministic
+BEGIN
+	DECLARE vendor_count INT;
+    
+    SELECT COUNT(DISTINCT id)
+    INTO vendor_count
+    FROM vendor
+    WHERE vendor.bank_adress = adress;
+    
+    RETURN vendor_count;
+END$$
+
+DELIMITER ;
+
+#Вызов функции и поиск
+select BankVendorsCount ("Тинькофф")
+
+#Обновление номера документа в таблице единиц хранения при обновление номера документа в таблице документов
+DELIMITER $$
+
+create trigger CascadeUpdateDocumentNumbers
+after update on documents
+for each row
+begin
+	update storage 
+    set storage.document_number = new.number
+    where storage.document_id = old.id;
+END $$
+
+DELIMITER ;
