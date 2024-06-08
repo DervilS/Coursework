@@ -1,0 +1,36 @@
+{% block content %}
+
+{% if form.errors %}
+<p>Попробуйте войти снова</p>
+{% endif %}
+
+<form method="post" action="/register/">
+{% csrf_token %}
+<table>
+
+{% if error %}
+    {{error}}
+{% endif %}
+
+<tr>
+    <td>Имя пользователя</td>
+    <td><input type="text" name="username"></td>
+</tr>
+
+<tr>
+    <td>Пароль</td>
+    <td><input type="password" name="password"></td>
+</tr>
+
+<tr>
+    <td>Подтверждение</td>
+    <td><input type="password" name="confirm"></td>
+</tr>
+
+</table>
+
+<input type="submit" value="зарегистрироваться">
+</form>
+<a href="/login/">Войти</a>
+
+{% endblock %}

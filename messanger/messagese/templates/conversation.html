@@ -1,0 +1,143 @@
+<!--Страница переписки-->
+<html>
+    <head>
+        <!--Подключение статических файлов(изображения, css и javascript)-->
+        {% load static %}
+        <link rel="stylesheet" type="text/css" href="{% static 'css\conversation.css' %}">
+    </head>
+    <body>
+        <!--Вывод формы с кнопкой для выхода из мессенджера и именем пользователя-->
+        <form action="{% url 'logout' %}" method="POST">
+            {% csrf_token %}
+            <button type="submit"> Выйти </button><span>{{user.username}}</span>
+        </form>
+        <div id="container">
+        <!--Вывод списка друзей с формой добавления новых друзей, приемы и отклонения заявок-->
+            <div id="friends">
+                <form method="POST" action="/add_friend/">
+                    {% csrf_token %}
+                    <input type="text" name="name">
+                    <input type="submit" value="Добавить в друзья">
+                    {% if error  %}
+                        <p style="color: red; margin-left: 10px;">{{error}}</p>
+                    {% endif %}
+                </form>
+                <div>
+                    {% if new_friends_list|length > 0 %}
+                        <h3>Запросы на добавление в друзья:</h3>
+                        {% for friendship in new_friends_list %}
+                            <p>{{friendship.user1.username}}&nbsp;<a href="/accept/{{friendship.user1.id}}/">Принять</a>&nbsp;<a href="/reject/{{friendship.user1.id}}/">Отклонить</a></p>
+                        {% endfor %}
+                    {% endif %}
+                    {% for friendship in friends_list %}
+                        {% if friendship.user1 == user %}
+                            <p><a href="/{{friendship.user2.id}}/">{{friendship.user2.username}}</a></p>
+                        {% else %}
+                            <p><a href="/{{friendship.user1.id}}/">{{friendship.user1.username}}</a></p>
+                        {% endif %}
+                    {% endfor %}
+                    {% if responsers_list|length > 0 %}
+                        <h3>Ожидание принятия в друзья:</h3>
+                        {% for friendship in responsers_list %}
+                            <p>{{friendship.user2.username}}</p>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            <!--Блок вывода сообщений переписки-->
+            <div id="conversation-block">
+                <div id="conversation">
+                    <p id="friend-caption">{{receiver.username}}</p>
+                    {% for message in message_list %}
+                        <div class="message-block">
+                            <div class="{% if message.sender == user %}user-message{% else %}friend-message{% endif %}">
+                                <div>
+                                    <p class="message">{{message.text}}</p>
+                                    <p class="datetime">{{message.created_at|date:"d.m.Y H:i"}}</p>
+                                </div>
+                            </div>
+                            <div style="clear: both;"></div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <!--Поле ввода нового сообщения-->
+                <div id="new-message">
+                    <form action="/conversation/{{receiver.id}}/" method="POST" id="message-form">
+                        {% csrf_token %}
+                        <input name="message" type="text" id="message">
+                        <input name="receiver_id" id="receiver_id" value="{{receiver.id}}" type="hidden"> 
+                        <input type="submit" value="Отправить" id="send-btn">
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!--Код работы JavaScript-->
+        <script src="https://momentjs.com/downloads/moment.js"></script>
+        <script>
+            let form = document.querySelector('#message-form');
+            let message_input = document.querySelector('#message');
+            let receiver_input = document.querySelector('#receiver_id');
+            let conversation = document.querySelector('#conversation');
+            let current_user = "{{user.username}}";
+            let receiver_id = receiver_input.value;
+            conversation.scrollTop = conversation.scrollHeight;
+            //Подключение к web серверу по протоколу WebSocket
+            let socket = new WebSocket (`ws://`+window.location.host+`/ws/messanger/${receiver_id}/`);
+            //Обработка события соединений по WebSocket
+            socket.onopen = () => 
+            {
+                console.log('connected')
+            }
+
+            //Обработчик события получения сообщения от сервера по WebSocket
+            socket.onmessage = (event) =>
+            {
+                //Создание html элементов для отображения нового сообщения и добавление их на страницу переписки
+                let message_block = document.createElement('div');
+                let text = document.createElement('p');
+                let date = document.createElement('p');
+                let data = JSON.parse(event.data);
+                text.textContent = data.message;
+                text.classList.add('message');
+                date.textContent = moment().format('DD.MM.YYYY HH:mm');
+                date.classList.add('datetime');
+                let data_block = document.createElement('div');
+                data_block.append(text,date);
+                let user_block = document.createElement('div');
+                let user_class = 'user-message';
+                if (current_user != data.sender)
+                {
+                    user_class = 'friend-message';
+                }
+                user_block.classList.add(user_class);
+                user_block.append(data_block);
+                let clear_block = document.createElement('div');
+                clear_block.style = 'clear:both';
+                message_block.append(user_block, clear_block);
+                message_block.classList.add('message-block');
+                conversation.append(message_block);
+                conversation.scrollTop = conversation.scrollHeight;
+                
+            }
+
+            //Обработка события ошибки соединения
+            socket.onerror = (event) =>
+            {
+                console.log(event)
+            }
+            //Добавление обработчика события отправки формы
+            form.addEventListener('submit', (event) => 
+            {
+                event.preventDefault();
+                if(message_input.value == '')
+                {
+                    return;
+                }
+                //Отправление сообщения пользователя по вебсокету в формате JSON
+                socket.send(JSON.stringify({'text': message_input.value}));
+                message_input.value = '';
+            })
+        </script>
+    </body>
+</html>

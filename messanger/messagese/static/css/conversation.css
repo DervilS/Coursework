@@ -1,0 +1,105 @@
+/*body
+{
+    background-color: #000000;
+    color: #ffffff;
+}*/
+
+#container
+{
+    display: flex;
+}
+
+.message-block
+{
+    width: 100%;
+    clear: both;
+    margin-bottom: 5%;
+}
+
+#friend-caption
+{
+    width: 100%;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #000000;
+}
+
+#friends
+{
+    width: 25%;
+    height: 80%;
+    border: 1px solid black;
+    height: 80vh;
+    overflow-y: scroll;
+    padding: 10px;
+}
+
+#conversation-block
+{
+    height: 80vh;
+    width: 70%;
+}
+
+#conversation
+{
+    height: 80%;
+    border: 1px solid black;
+    overflow-y: scroll;
+    padding: 10px;
+    height: 100%;
+    font-size: 1.3em;
+    font-weight: bold;
+    color: #000000;
+}
+
+.friend-message
+{
+    text-align: left;
+}
+
+.friend-message div
+{
+    width: 48%;
+    float: left;
+    background-color: #ace5ee;
+    padding: 1%;
+    border-radius: 10px;
+}
+
+.user-message
+{
+    text-align: right;
+}
+
+.user-message div
+{
+    width: 48%;
+    float: right;
+    background-color: #99ff99;
+    padding: 1%;
+    border-radius: 10px;
+}
+
+#new-message
+{
+    margin-left: 25%;
+}
+
+.sender
+{
+    color: gray;
+}
+
+.message
+{
+    margin-left: 20px;
+    margin-right: 20px;
+}
+
+.datetime
+{
+    margin-left: 20px; 
+    margin-right: 20px;
+    color: #333333;
+}
